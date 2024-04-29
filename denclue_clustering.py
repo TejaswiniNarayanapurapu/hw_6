@@ -16,34 +16,6 @@ import pickle
 def denclue(
     data: NDArray[np.floating], labels: NDArray[np.int32], params_dict: dict
 ) -> tuple[NDArray[np.int32] | None, float | None, float | None]:
-
-    sigma = params_dict['sigma']
-    xi = params_dict['xi']
-    n_samples = data.shape[0]
-
-    # Gaussian kernel for density estimation
-    def gaussian_kernel(x, y):
-        return np.exp(-np.linalg.norm(x - y)**2 / (2 * sigma**2))
-
-    # Compute the density at each point
-    density = np.zeros(n_samples)
-    for i in range(n_samples):
-        for j in range(n_samples):
-            density[i] += gaussian_kernel(data[i], data[j])
-
-    # Label points as noise or cluster
-    computed_labels = np.full(n_samples, -1, dtype=int)  # -1 denotes noise
-    cluster_id = 0
-    for i in range(n_samples):
-        if density[i] > xi:
-            if computed_labels[i] == -1:  # not yet labeled
-                computed_labels[i] = cluster_id
-                cluster_id += 1
-            for j in range(n_samples):
-                if density[j] > xi and gaussian_kernel(data[i], data[j]) > xi:
-                    computed_labels[j] = computed_labels[i]  # assign cluster label
-
-    
     """
     Implementation of the DENCLUE algorithm only using the `numpy` module
 
@@ -59,9 +31,9 @@ def denclue(
     """
 
     computed_labels: NDArray[np.int32] | None = None
-    SSE = np.sum((density - np.mean(density))**2)
-    from sklearn.metrics import adjusted_rand_score
-    ARI = adjusted_rand_score(labels, computed_labels)
+    SSE: float | None = None
+    ARI: float | None = None
+
     return computed_labels, SSE, ARI
 
 def denclue_clustering():
@@ -84,16 +56,9 @@ def denclue_clustering():
     # Work with the first 10,000 data points: data[0:10000]
     # Do a parameter study of this data using DENCLUE
     # Minimmum of 10 pairs of parameters ('sigma' and 'xi').
-    data = np.load('question1_cluster_data.npy')
-    labels = np.load('question1_cluster_labels.npy')
 
     # Create a dictionary for each parameter pair ('sigma' and 'xi').
     groups = {}
-    for sigma in np.linspace(0.1, 10, 10):
-        for xi in np.linspace(0.1, 10, 10):
-            params_dict = {'sigma': sigma, 'xi': xi}
-            computed_labels, SSE, ARI = denclue(data[:10000], labels[:10000], params_dict)
-            groups[(sigma, xi)] = {'SSE': SSE, 'ARI': ARI}
 
     # data for data group 0: data[0:10000]. For example,
     # groups[0] = {"sigma": 0.1, "ARI": 0.1, "SSE": 0.1}
@@ -152,4 +117,3 @@ if __name__ == "__main__":
     all_answers = denclue_clustering()
     with open("denclue_clustering.pkl", "wb") as fd:
         pickle.dump(all_answers, fd, protocol=pickle.HIGHEST_PROTOCOL)
-
